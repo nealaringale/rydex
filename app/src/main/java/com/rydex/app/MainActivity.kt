@@ -2,6 +2,8 @@ package com.rydex.app
 
 import android.Manifest
 import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.widget.Toast
@@ -2155,19 +2157,31 @@ private fun RydexTheme(
     }
 
     val view = LocalView.current
+    val context = LocalContext.current
     SideEffect {
-        val window = (view.context as Activity).window
-        window.statusBarColor = android.graphics.Color.TRANSPARENT
-        window.navigationBarColor = android.graphics.Color.TRANSPARENT
-        val controller = WindowCompat.getInsetsController(window, view)
-        controller.isAppearanceLightStatusBars = !darkTheme
-        controller.isAppearanceLightNavigationBars = !darkTheme
+        context.findActivity()?.let { activity ->
+            val window = activity.window
+            window.statusBarColor = android.graphics.Color.TRANSPARENT
+            window.navigationBarColor = android.graphics.Color.TRANSPARENT
+            val controller = WindowCompat.getInsetsController(window, view)
+            controller.isAppearanceLightStatusBars = !darkTheme
+            controller.isAppearanceLightNavigationBars = !darkTheme
+        }
     }
 
     MaterialTheme(
         colorScheme = colorScheme,
         content = content,
     )
+}
+
+private fun Context.findActivity(): Activity? {
+    var current: Context = this
+    while (current is ContextWrapper) {
+        if (current is Activity) return current
+        current = current.baseContext
+    }
+    return current as? Activity
 }
 
 private fun formatDuration(seconds: Int): String {
