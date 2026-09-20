@@ -9,6 +9,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import java.time.ZoneId
 import java.time.ZonedDateTime
@@ -51,7 +52,8 @@ class RydexViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun updateLocation(loc: Location) {
         currentLocation = LatLngDto(loc.latitude, loc.longitude)
-        locationLabel = "${"%.5f".format(loc.latitude)}, ${"%.5f".format(loc.longitude)}"
+        locationLabel =
+            "${"%.5f".format(loc.latitude)}, ${"%.5f".format(loc.longitude)}"
         currentSpeedKmh = "${(loc.speed * 3.6f).roundToInt()} km/h"
         updateInstruction(loc)
     }
@@ -59,6 +61,7 @@ class RydexViewModel(app: Application) : AndroidViewModel(app) {
     fun planTrip(onDone: () -> Unit) {
         val origin = currentLocation ?: return
         planning = true
+
         viewModelScope.launch {
             val request = PlanRequest(
                 origin = origin,
@@ -77,10 +80,16 @@ class RydexViewModel(app: Application) : AndroidViewModel(app) {
             runCatching { repo.planTrip(request) }
                 .onSuccess {
                     plan = it
+                    stepIndex = 0
                     onDone()
                 }
                 .onFailure {
-                    plan = DemoPlanFactory.create(origin, destination, request.preferences)
+                    plan = DemoPlanFactory.create(
+                        origin,
+                        destination,
+                        request.preferences,
+                    )
+                    stepIndex = 0
                     onDone()
                 }
 
@@ -92,12 +101,19 @@ class RydexViewModel(app: Application) : AndroidViewModel(app) {
         val steps = plan?.steps.orEmpty()
         if (steps.isEmpty()) return
 
-        if (stepIndex >= steps.size) stepIndex = steps.lastIndex
+        if (stepIndex >= steps.size) {
+            stepIndex = steps.lastIndex
+        }
 
         val step = steps[stepIndex]
-        val d = distanceMeters(loc.latitude, loc.longitude, step.lat, step.lng)
+        val distance = distanceMeters(
+            loc.latitude,
+            loc.longitude,
+            step.lat,
+            step.lng,
+        )
 
-        if (d < 120 && stepIndex < steps.lastIndex) {
+        if (distance < 120 && stepIndex < steps.lastIndex) {
             stepIndex++
         }
 
@@ -109,9 +125,11 @@ class RydexViewModel(app: Application) : AndroidViewModel(app) {
             }
     }
 
-    fun nextFuel() = plan?.stops?.firstOrNull { it.type == "fuel" }
+    fun nextFuel() =
+        plan?.stops?.firstOrNull { it.type == "fuel" }
 
-    fun nextFood() = plan?.stops?.firstOrNull { it.type == "food" }
+    fun nextFood() =
+        plan?.stops?.firstOrNull { it.type == "food" }
 
     fun currentWeatherRecommendation() =
         plan?.weather?.firstOrNull()?.recommendation
@@ -123,7 +141,13 @@ class RydexViewModel(app: Application) : AndroidViewModel(app) {
         bLng: Double,
     ): Double {
         val result = FloatArray(1)
-        Location.distanceBetween(aLat, aLng, bLat, bLng, result)
+        Location.distanceBetween(
+            aLat,
+            aLng,
+            bLat,
+            bLng,
+            result,
+        )
         return result[0].toDouble()
     }
 }
