@@ -1563,10 +1563,19 @@ private fun RideScreen(
     vm: RydexViewModel,
     onStop: () -> Unit,
 ) {
+    val context = LocalContext.current
     val plan = vm.plan
     val window = rememberRydexWindowInfo()
     val route = remember(plan?.encodedPolyline) {
-        plan?.encodedPolyline?.let(PolylineDecoder::decode).orEmpty()
+        runCatching {
+            plan?.encodedPolyline
+                ?.takeIf { it.isNotBlank() }
+                ?.let(PolylineDecoder::decode)
+                .orEmpty()
+        }.getOrElse { emptyList() }
+    }
+    val mapAvailable = remember(context, BuildConfig.MAPS_API_KEY, route) {
+        canRenderGoogleMap(context)
     }
     val coroutineScope = rememberCoroutineScope()
 
@@ -1577,7 +1586,7 @@ private fun RideScreen(
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(
             route.firstOrNull() ?: LatLng(19.9, 73.8),
-            11f,
+            if (route.isNotEmpty()) 11f else 10f,
         )
     }
 
@@ -1586,13 +1595,7 @@ private fun RideScreen(
             .fillMaxSize()
             .background(Color.Black),
     ) {
-        if (isMapsConfigured()) {
-            val context = LocalContext.current
-
-        if (canRenderGoogleMap(context)) {
-            val context = LocalContext.current
-
-        if (canRenderGoogleMap(context)) {
+        if (mapAvailable) {
             GoogleMap(
                 modifier = Modifier.fillMaxSize(),
                 cameraPositionState = cameraPositionState,
@@ -1654,6 +1657,7 @@ private fun RideScreen(
                             !isMapsConfigured() -> "Google Maps setup required"
                             !isGooglePlayServicesAvailable(context) ->
                                 "Google Play services required"
+                            route.isEmpty() -> "Route unavailable"
                             else -> "Map unavailable"
                         },
                         color = Color.White,
@@ -1662,11 +1666,13 @@ private fun RideScreen(
                     Text(
                         when {
                             !isMapsConfigured() ->
-                                "This APK was built without a valid Maps API key."
+                                "This APK has no valid Google Maps Android key."
                             !isGooglePlayServicesAvailable(context) ->
                                 "Google Play services are unavailable on this device."
+                            route.isEmpty() ->
+                                "RYDEX does not have a valid route to display."
                             else ->
-                                "Navigation details remain visible without the map."
+                                "Navigation details remain available without the map."
                         },
                         color = Color(0xFFB9C3CB),
                         style = MaterialTheme.typography.bodySmall,
@@ -1704,7 +1710,7 @@ private fun RideScreen(
         ) {
             IconButton(
                 onClick = {
-                    if (!isMapsConfigured()) return@IconButton
+                    if (!mapAvailable) return@IconButton
                     vm.currentLocation?.let { location ->
                         coroutineScope.launch {
                             cameraPositionState.animate(
@@ -1716,12 +1722,13 @@ private fun RideScreen(
                         }
                     }
                 },
+                enabled = mapAvailable,
                 modifier = Modifier.size(48.dp),
             ) {
                 Icon(
                     Icons.Default.MyLocation,
                     contentDescription = "Center on my location",
-                    tint = Color.White,
+                    tint = if (mapAvailable) Color.White else Color(0xFF65727D),
                 )
             }
         }
