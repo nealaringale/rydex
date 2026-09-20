@@ -5,6 +5,8 @@ import android.content.ClipData
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Bundle
+import com.google.android.gms.common.ConnectionResult
+import com.google.android.gms.common.GoogleApiAvailability
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -142,6 +144,13 @@ private fun isMapsConfigured(): Boolean {
 
 private fun isEmulatorBackendUrl(): Boolean =
     BuildConfig.BACKEND_URL.contains("10.0.2.2")
+
+private fun isGooglePlayServicesAvailable(context: android.content.Context): Boolean =
+    GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(context) ==
+        ConnectionResult.SUCCESS
+
+private fun canRenderGoogleMap(context: android.content.Context): Boolean =
+    isMapsConfigured() && isGooglePlayServicesAvailable(context)
 
 private data class RydexWindowInfo(
     val widthDp: Int,
@@ -1173,43 +1182,17 @@ private fun RideStat(
 }
 
 @Composable
+@Composable
 private fun TripMapPreview(
     plan: TripPlan?,
-    modifier: Modifier = Modifier,
+    modifier: Modifier,
 ) {
+    val context = LocalContext.current
     val route = remember(plan?.encodedPolyline) {
-        plan?.encodedPolyline?.let {
-            runCatching { PolylineDecoder.decode(it) }.getOrDefault(emptyList())
-        }.orEmpty()
-    }
-
-    if (route.isEmpty()) {
-        RydexCard(modifier = modifier) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center,
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Icon(
-                        Icons.Default.Map,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Text(
-                        "Map preview unavailable",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-        }
-        return
-    }
-
-    val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(route.first(), 10.5f)
+        runCatching {
+            plan?.encodedPolyline?.takeIf { it.isNotBlank() }?.let(PolylineDecoder::decode)
+                .orEmpty()
+        }.getOrElse { emptyList() }
     }
 
     RydexCard(
@@ -1217,7 +1200,14 @@ private fun TripMapPreview(
         contentPadding = 0.dp,
     ) {
         Box(Modifier.fillMaxSize()) {
-            if (isMapsConfigured()) {
+            if (route.isNotEmpty() && canRenderGoogleMap(context)) {
+                val cameraPositionState = rememberCameraPositionState {
+                    position = CameraPosition.fromLatLngZoom(
+                        route.first(),
+                        10.5f,
+                    )
+                }
+
                 GoogleMap(
                     modifier = Modifier.fillMaxSize(),
                     cameraPositionState = cameraPositionState,
@@ -1252,57 +1242,74 @@ private fun TripMapPreview(
                         )
                     }
                 }
-            } else {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
+
+                plan?.let {
+                    Surface(
+                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
+                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(14.dp),
                     ) {
-                        Icon(
-                            Icons.Default.Map,
-                            contentDescription = null,
-                            tint = RydexColors.warning,
-                        )
-                        Text(
-                            "Google Maps setup required",
-                            fontWeight = FontWeight.Bold,
-                        )
-                        Text(
-                            "Add an Android-restricted Maps API key to the build.",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            style = MaterialTheme.typography.bodySmall,
-                        )
+                        Row(
+                            modifier = Modifier.padding(
+                                horizontal = 12.dp,
+                                vertical = 9.dp,
+                            ),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                Icons.Default.Route,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp),
+                            )
+                            Text(
+                                formatDistance(it.distanceMeters),
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
                     }
                 }
-            }
-
-            Surface(
-                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
-                shape = RoundedCornerShape(14.dp),
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(14.dp),
-            ) {
-                Row(
-                    modifier = Modifier.padding(
-                        horizontal = 12.dp,
-                        vertical = 9.dp,
-                    ),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+            } else {
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Icon(
-                        Icons.Default.Route,
+                        Icons.Default.Map,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(18.dp),
+                        tint = if (isMapsConfigured()) {
+                            RydexColors.info
+                        } else {
+                            RydexColors.warning
+                        },
                     )
                     Text(
-                        formatDistance(plan?.distanceMeters ?: 0),
+                        when {
+                            !isMapsConfigured() -> "Google Maps setup required"
+                            !isGooglePlayServicesAvailable(context) ->
+                                "Google Play services required"
+                            route.isEmpty() -> "Route preview unavailable"
+                            else -> "Map preview unavailable"
+                        },
                         fontWeight = FontWeight.Bold,
+                    )
+                    Text(
+                        when {
+                            !isMapsConfigured() ->
+                                "This build has no valid Maps API key."
+                            !isGooglePlayServicesAvailable(context) ->
+                                "Google Play services are unavailable on this device."
+                            else ->
+                                "RYDEX can still show the trip details without the map."
+                        },
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodySmall,
                     )
                 }
             }
@@ -1575,6 +1582,9 @@ private fun RideScreen(
             .background(Color.Black),
     ) {
         if (isMapsConfigured()) {
+            val context = LocalContext.current
+
+        if (canRenderGoogleMap(context)) {
             GoogleMap(
                 modifier = Modifier.fillMaxSize(),
                 cameraPositionState = cameraPositionState,
@@ -1632,12 +1642,24 @@ private fun RideScreen(
                         tint = RydexColors.warning,
                     )
                     Text(
-                        "Google Maps setup required",
+                        when {
+                            !isMapsConfigured() -> "Google Maps setup required"
+                            !isGooglePlayServicesAvailable(context) ->
+                                "Google Play services required"
+                            else -> "Map unavailable"
+                        },
                         color = Color.White,
                         fontWeight = FontWeight.Bold,
                     )
                     Text(
-                        "Add an Android-restricted Maps API key to the build.",
+                        when {
+                            !isMapsConfigured() ->
+                                "Add a valid Android-restricted Maps API key to this build."
+                            !isGooglePlayServicesAvailable(context) ->
+                                "Google Play services are unavailable on this device."
+                            else ->
+                                "RYDEX navigation can continue without rendering Google Maps."
+                        },
                         color = Color(0xFFB9C3CB),
                         style = MaterialTheme.typography.bodySmall,
                     )
