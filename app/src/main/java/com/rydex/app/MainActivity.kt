@@ -138,7 +138,11 @@ private object RydexColors {
 
 private enum class Screen { HOME, PLAN, REVIEW, RIDE }
 
-private fun isMapsConfigured(): Boolean = BuildConfig.MAPS_API_KEY.isNotBlank()
+private fun isMapsConfigured(): Boolean {
+    val key = BuildConfig.MAPS_API_KEY.trim()
+    return key.isNotEmpty() &&
+        !key.equals("YOUR_ANDROID_RESTRICTED_KEY", ignoreCase = true)
+}
 
 private fun isEmulatorBackendUrl(): Boolean =
     BuildConfig.BACKEND_URL.contains("10.0.2.2")
@@ -201,33 +205,35 @@ private fun HomeScreen(vm: RydexViewModel, onPlan: () -> Unit) {
     val context = LocalContext.current
     val window = rememberRydexWindowInfo()
 
+    val hasPermission = remember {
+        ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.ACCESS_FINE_LOCATION,
+        ) == PackageManager.PERMISSION_GRANTED ||
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.ACCESS_COARSE_LOCATION,
+            ) == PackageManager.PERMISSION_GRANTED
+    }
+
+    var locationPermissionGranted by remember {
+        mutableStateOf(hasPermission)
+    }
+
     val permissionLauncher =
         rememberLauncherForActivityResult(
             ActivityResultContracts.RequestMultiplePermissions(),
         ) { result ->
-            if (result.values.any { it }) vm.startLocationUpdates()
+            val granted = result.values.any { it }
+            locationPermissionGranted = granted
+            if (granted) {
+                vm.startLocationUpdates()
+            }
         }
 
-    LaunchedEffect(Unit) {
-        val granted =
-            ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.ACCESS_FINE_LOCATION,
-            ) == PackageManager.PERMISSION_GRANTED ||
-                ContextCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.ACCESS_COARSE_LOCATION,
-                ) == PackageManager.PERMISSION_GRANTED
-
-        if (granted) {
+    LaunchedEffect(locationPermissionGranted) {
+        if (locationPermissionGranted) {
             vm.startLocationUpdates()
-        } else {
-            permissionLauncher.launch(
-                arrayOf(
-                    Manifest.permission.ACCESS_FINE_LOCATION,
-                    Manifest.permission.ACCESS_COARSE_LOCATION,
-                ),
-            )
         }
     }
 
@@ -257,6 +263,15 @@ private fun HomeScreen(vm: RydexViewModel, onPlan: () -> Unit) {
                 )
                 HomeStatusPane(
                     vm = vm,
+                    locationPermissionGranted = locationPermissionGranted,
+                    onRequestLocation = {
+                        permissionLauncher.launch(
+                            arrayOf(
+                                Manifest.permission.ACCESS_FINE_LOCATION,
+                                Manifest.permission.ACCESS_COARSE_LOCATION,
+                            ),
+                        )
+                    },
                     modifier = Modifier.weight(0.85f),
                 )
             }
@@ -291,7 +306,20 @@ private fun HomeScreen(vm: RydexViewModel, onPlan: () -> Unit) {
                     )
                 }
                 item { QuickDestinations(vm) }
-                item { HomeStatusPane(vm) }
+                item {
+                    HomeStatusPane(
+                        vm = vm,
+                        locationPermissionGranted = locationPermissionGranted,
+                        onRequestLocation = {
+                            permissionLauncher.launch(
+                                arrayOf(
+                                    Manifest.permission.ACCESS_FINE_LOCATION,
+                                    Manifest.permission.ACCESS_COARSE_LOCATION,
+                                ),
+                            )
+                        },
+                    )
+                }
             }
         }
     }
@@ -430,6 +458,8 @@ private fun QuickDestinations(vm: RydexViewModel) {
 @Composable
 private fun HomeStatusPane(
     vm: RydexViewModel,
+    locationPermissionGranted: Boolean,
+    onRequestLocation: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -456,9 +486,9 @@ private fun HomeStatusPane(
                         )
                     }
                     StatusPill(
-                        text = if (vm.hasLocationPermission) "GPS ready" else "GPS off",
+                        text = if (locationPermissionGranted) "GPS ready" else "GPS off",
                         icon = Icons.Default.GpsFixed,
-                        tint = if (vm.hasLocationPermission) {
+                        tint = if (locationPermissionGranted) {
                             MaterialTheme.colorScheme.primary
                         } else {
                             RydexColors.warning
@@ -487,6 +517,24 @@ private fun HomeStatusPane(
                         modifier = Modifier.weight(1f),
                     )
                 }
+
+                if (!locationPermissionGranted) {
+                    Button(
+                        onClick = onRequestLocation,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(46.dp),
+                        shape = RoundedCornerShape(12.dp),
+                    ) {
+                        Icon(
+                            Icons.Default.GpsFixed,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text("Enable live location")
+                    }
+                }
             }
         }
 
@@ -503,7 +551,7 @@ private fun HomeStatusPane(
                             fontWeight = FontWeight.Bold,
                         )
                         Text(
-                            "This APK was built without a Google Maps Android key. Map screens cannot display Google Maps until the key is supplied.",
+                            "This build has no Google Maps Android key. Planning can still be explored in demo mode, but live map rendering needs a valid key.",
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.bodySmall,
                         )
@@ -515,7 +563,7 @@ private fun HomeStatusPane(
                             modifier = Modifier.padding(top = 4.dp),
                         )
                         Text(
-                            "10.0.2.2 points to the Android emulator host. A physical phone needs your computer LAN address or a deployed HTTPS backend.",
+                            "10.0.2.2 points to the Android emulator host. A physical phone needs your computer's LAN address or a deployed HTTPS backend.",
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.bodySmall,
                         )
@@ -540,7 +588,7 @@ private fun HomeStatusPane(
                 Column {
                     Text("Tip", fontWeight = FontWeight.Bold)
                     Text(
-                        "Start planning from a location with GPS permission enabled for the best route.",
+                        "Granting location only when you plan a ride avoids unnecessary permission prompts.",
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodySmall,
                     )
@@ -1090,7 +1138,9 @@ private fun TripMapPreview(
     modifier: Modifier = Modifier,
 ) {
     val route = remember(plan?.encodedPolyline) {
-        plan?.encodedPolyline?.let(PolylineDecoder::decode).orEmpty()
+        plan?.encodedPolyline?.let {
+            runCatching { PolylineDecoder.decode(it) }.getOrDefault(emptyList())
+        }.orEmpty()
     }
 
     if (route.isEmpty()) {
@@ -1584,6 +1634,7 @@ private fun RideScreen(
         ) {
             IconButton(
                 onClick = {
+                    if (!isMapsConfigured()) return@IconButton
                     vm.currentLocation?.let { location ->
                         coroutineScope.launch {
                             cameraPositionState.animate(
