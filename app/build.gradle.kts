@@ -59,7 +59,7 @@ android {
         buildConfigField(
             "String",
             "BACKEND_URL",
-            ""$backendUrl"",
+            "\"$backendUrl\"",
         )
     }
 }
