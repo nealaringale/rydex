@@ -1,0 +1,6 @@
+# Android-restricted Google Maps Platform key for the RYDEX app.
+MAPS_API_KEY=YOUR_ANDROID_RESTRICTED_KEY
+
+# Emulator: http://10.0.2.2:8787/
+# Physical phone: use your computer LAN IP.
+RYDEX_BACKEND_URL=http://10.0.2.2:8787/
