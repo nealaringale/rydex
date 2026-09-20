@@ -136,6 +136,11 @@ private object RydexColors {
 
 private enum class Screen { HOME, PLAN, REVIEW, RIDE }
 
+private fun isMapsConfigured(): Boolean = BuildConfig.MAPS_API_KEY.isNotBlank()
+
+private fun isEmulatorBackendUrl(): Boolean =
+    BuildConfig.BACKEND_URL.contains("10.0.2.2")
+
 private data class RydexWindowInfo(
     val widthDp: Int,
     val heightDp: Int,
@@ -483,39 +488,37 @@ private fun HomeStatusPane(
             }
         }
 
-        RydexCard(
-            modifier = Modifier.fillMaxWidth(),
-            tone = CardTone.Low,
-        ) {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    Icon(
-                        Icons.Default.DirectionsBike,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                    )
-                    Text(
-                        "Built for riding",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                    )
+        if (!isMapsConfigured() || isEmulatorBackendUrl()) {
+            RydexCard(
+                modifier = Modifier.fillMaxWidth(),
+                tone = CardTone.High,
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Eyebrow("DEVICE SETUP", color = RydexColors.warning)
+                    if (!isMapsConfigured()) {
+                        Text(
+                            "Google Maps key missing",
+                            fontWeight = FontWeight.Bold,
+                        )
+                        Text(
+                            "This APK was built without a Google Maps Android key. Map screens cannot display Google Maps until the key is supplied.",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                    if (isEmulatorBackendUrl()) {
+                        Text(
+                            "Planner URL is emulator-only",
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(top = 4.dp),
+                        )
+                        Text(
+                            "10.0.2.2 points to the Android emulator host. A physical phone needs your computer LAN address or a deployed HTTPS backend.",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
                 }
-
-                FeatureLine(
-                    title = "One-hand friendly",
-                    description = "Large controls and clear hierarchy.",
-                )
-                FeatureLine(
-                    title = "Adaptive by design",
-                    description = "The layout reflows for portrait and landscape.",
-                )
-                FeatureLine(
-                    title = "High-contrast cockpit",
-                    description = "Important information stays readable at a glance.",
-                )
             }
         }
 
@@ -1122,38 +1125,65 @@ private fun TripMapPreview(
         contentPadding = 0.dp,
     ) {
         Box(Modifier.fillMaxSize()) {
-            GoogleMap(
-                modifier = Modifier.fillMaxSize(),
-                cameraPositionState = cameraPositionState,
-                contentDescription = "Trip route map",
-                mapColorScheme = ComposeMapColorScheme.FOLLOW_SYSTEM,
-                properties = MapProperties(),
-                uiSettings = MapUiSettings(
-                    zoomControlsEnabled = false,
-                    compassEnabled = false,
-                    myLocationButtonEnabled = false,
-                    mapToolbarEnabled = false,
-                ),
-            ) {
-                Polyline(
-                    points = route,
-                    width = 11f,
-                    color = Color(0x66000000),
-                )
-                Polyline(
-                    points = route,
-                    width = 7f,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-
-                plan?.stops?.forEach { stop ->
-                    Marker(
-                        state = MarkerState(
-                            position = LatLng(stop.lat, stop.lng),
-                        ),
-                        title = stop.name,
-                        snippet = stop.address,
+            if (isMapsConfigured()) {
+                GoogleMap(
+                    modifier = Modifier.fillMaxSize(),
+                    cameraPositionState = cameraPositionState,
+                    contentDescription = "Trip route map",
+                    mapColorScheme = ComposeMapColorScheme.FOLLOW_SYSTEM,
+                    properties = MapProperties(),
+                    uiSettings = MapUiSettings(
+                        zoomControlsEnabled = false,
+                        compassEnabled = false,
+                        myLocationButtonEnabled = false,
+                        mapToolbarEnabled = false,
+                    ),
+                ) {
+                    Polyline(
+                        points = route,
+                        width = 11f,
+                        color = Color(0x66000000),
                     )
+                    Polyline(
+                        points = route,
+                        width = 7f,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+
+                    plan?.stops?.forEach { stop ->
+                        Marker(
+                            state = MarkerState(
+                                position = LatLng(stop.lat, stop.lng),
+                            ),
+                            title = stop.name,
+                            snippet = stop.address,
+                        )
+                    }
+                }
+            } else {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Icon(
+                            Icons.Default.Map,
+                            contentDescription = null,
+                            tint = RydexColors.warning,
+                        )
+                        Text(
+                            "Google Maps setup required",
+                            fontWeight = FontWeight.Bold,
+                        )
+                        Text(
+                            "Add an Android-restricted Maps API key to the build.",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
                 }
             }
 
@@ -1452,42 +1482,74 @@ private fun RideScreen(
             .fillMaxSize()
             .background(Color.Black),
     ) {
-        GoogleMap(
-            modifier = Modifier.fillMaxSize(),
-            cameraPositionState = cameraPositionState,
-            contentDescription = "RYDEX live navigation map",
-            mapColorScheme = ComposeMapColorScheme.DARK,
-            properties = MapProperties(
-                isMyLocationEnabled = vm.hasLocationPermission,
-            ),
-            uiSettings = MapUiSettings(
-                zoomControlsEnabled = false,
-                compassEnabled = false,
-                myLocationButtonEnabled = false,
-                mapToolbarEnabled = false,
-            ),
-        ) {
-            if (route.isNotEmpty()) {
-                Polyline(
-                    points = route,
-                    width = 12f,
-                    color = Color(0x77000000),
-                )
-                Polyline(
-                    points = route,
-                    width = 8f,
-                    color = RydexColors.primary,
-                )
-            }
+        if (isMapsConfigured()) {
+            GoogleMap(
+                modifier = Modifier.fillMaxSize(),
+                cameraPositionState = cameraPositionState,
+                contentDescription = "RYDEX live navigation map",
+                mapColorScheme = ComposeMapColorScheme.DARK,
+                properties = MapProperties(
+                    isMyLocationEnabled = vm.hasLocationPermission,
+                ),
+                uiSettings = MapUiSettings(
+                    zoomControlsEnabled = false,
+                    compassEnabled = false,
+                    myLocationButtonEnabled = false,
+                    mapToolbarEnabled = false,
+                ),
+            ) {
+                if (route.isNotEmpty()) {
+                    Polyline(
+                        points = route,
+                        width = 12f,
+                        color = Color(0x77000000),
+                    )
+                    Polyline(
+                        points = route,
+                        width = 8f,
+                        color = RydexColors.primary,
+                    )
+                }
 
-            plan?.stops?.forEach { stop ->
-                Marker(
-                    state = MarkerState(
-                        position = LatLng(stop.lat, stop.lng),
-                    ),
-                    title = stop.name,
-                    snippet = stop.address,
-                )
+                plan?.stops?.forEach { stop ->
+                    Marker(
+                        state = MarkerState(
+                            position = LatLng(stop.lat, stop.lng),
+                        ),
+                        title = stop.name,
+                        snippet = stop.address,
+                    )
+                }
+            }
+        } else {
+            Surface(
+                color = Color(0xF20D1318),
+                shape = RoundedCornerShape(18.dp),
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .padding(24.dp),
+            ) {
+                Column(
+                    modifier = Modifier.padding(18.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Icon(
+                        Icons.Default.Map,
+                        contentDescription = null,
+                        tint = RydexColors.warning,
+                    )
+                    Text(
+                        "Google Maps setup required",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text(
+                        "Add an Android-restricted Maps API key to the build.",
+                        color = Color(0xFFB9C3CB),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
             }
         }
 
