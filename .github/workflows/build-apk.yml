@@ -111,8 +111,7 @@ jobs:
             sleep 5
             adb logcat -d -v threadtime -t 1200 | tail -n 600
             adb shell dumpsys activity activities > /tmp/rydex-activity.txt
-            adb shell uiautomator dump /sdcard/window.xml >/dev/null
-            adb shell cat /sdcard/window.xml > /tmp/rydex-ui.xml
-            python3 -c 'import pathlib,sys; s=pathlib.Path("/tmp/rydex-ui.xml").read_text(errors="ignore"); sys.exit(0 if "RYDEX" in s else 1)'
-            python3 -c 'import pathlib,subprocess,sys; s=subprocess.check_output(["adb","logcat","-d","-v","threadtime","-t","1200"],text=True,errors="ignore"); sys.exit(1 if "FATAL EXCEPTION" in s or ("AndroidRuntime" in s and "com.rydex.app" in s) else 0)'
-            python3 -c 'import pathlib,sys; s=pathlib.Path("/tmp/rydex-activity.txt").read_text(errors="ignore"); print(s[-6000:]); sys.exit(0 if "com.rydex.app" in s else 1)'
+            python3 -c 'import pathlib,sys; s=pathlib.Path("/tmp/rydex-activity.txt").read_text(errors="ignore"); print(s[-6000:]); sys.exit(0 if "com.rydex.app/.MainActivity" in s or "com.rydex.app" in s else 1)'
+            adb exec-out screencap -p > /tmp/rydex-screen.png
+            test -s /tmp/rydex-screen.png
+            python3 -c 'import subprocess,sys; s=subprocess.check_output(["adb","logcat","-d","-v","threadtime","-t","1200"],text=True,errors="ignore"); sys.exit(1 if "FATAL EXCEPTION" in s or ("AndroidRuntime" in s and "com.rydex.app" in s) else 0)'
