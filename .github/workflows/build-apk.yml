@@ -14,34 +14,43 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Set up JDK 21
+      - name: Set up JDK 17
         uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: "21"
+          java-version: "17"
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: "8.13"
+          gradle-version: "9.3.1"
 
-      - name: Verify Android SDK
+      - name: Configure Android SDK
         shell: bash
         run: |
           set -euxo pipefail
-          echo "ANDROID_HOME=$ANDROID_HOME"
-          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
-          test -d "$ANDROID_HOME"
-          if [ ! -d "$ANDROID_HOME/platforms/android-36" ]; then
-            SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
-            if [ ! -x "$SDKMANAGER" ]; then
-              SDKMANAGER="$ANDROID_HOME/cmdline-tools/16.0/bin/sdkmanager"
-            fi
-            test -x "$SDKMANAGER"
-            yes | "$SDKMANAGER" --licenses >/dev/null || true
-            "$SDKMANAGER" "platforms;android-36" "build-tools;36.0.0" "platform-tools"
+
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMANAGER" ]; then
+            SDKMANAGER="$ANDROID_HOME/cmdline-tools/16.0/bin/sdkmanager"
           fi
-          test -d "$ANDROID_HOME/platforms/android-36"
+
+          test -x "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+
+          if [ ! -d "$ANDROID_HOME/platforms/android-37" ]; then
+            "$SDKMANAGER" "platforms;android-37"
+          fi
+
+          if [ ! -d "$ANDROID_HOME/build-tools/36.0.0" ]; then
+            "$SDKMANAGER" "build-tools;36.0.0"
+          fi
+
+          if [ ! -d "$ANDROID_HOME/platform-tools" ]; then
+            "$SDKMANAGER" "platform-tools"
+          fi
+
+          test -d "$ANDROID_HOME/platforms/android-37"
 
       - name: Prepare demo local properties
         run: |
