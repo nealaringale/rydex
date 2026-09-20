@@ -51,8 +51,8 @@ jobs:
         run: |
           cat > local.properties <<EOF
           sdk.dir=$ANDROID_HOME
-          MAPS_API_KEY=
-          RYDEX_BACKEND_URL=http://10.0.2.2:8787/
+          MAPS_API_KEY=${{ secrets.MAPS_API_KEY }}
+          RYDEX_BACKEND_URL=${{ secrets.RYDEX_BACKEND_URL || 'http://10.0.2.2:8787/' }}
           EOF
 
       - name: Build debug APK
