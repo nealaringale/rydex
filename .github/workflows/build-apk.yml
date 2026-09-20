@@ -104,42 +104,16 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none
           script: |
             set -eu
-
             adb install -r app/build/outputs/apk/debug/app-debug.apk
             adb shell pm clear com.rydex.app >/dev/null 2>&1 || true
             adb shell am force-stop com.rydex.app
             adb logcat -c
-
-            echo "=== Launching RYDEX ==="
             adb shell am start -W -n com.rydex.app/.MainActivity
-
             sleep 5
-
-            PID="$(adb shell pidof com.rydex.app | tr -d '\r')"
-            if [ -z "$PID" ]; then
-              echo "RYDEX process is not running after launch."
-              echo "=== Activity state ==="
-              adb shell dumpsys activity activities | tail -n 160 || true
-              echo "=== Package state ==="
-              adb shell dumpsys package com.rydex.app | tail -n 160 || true
-              echo "=== Error logcat ==="
-              adb logcat -d -v threadtime "*:E" || true
-              echo "=== Full recent logcat ==="
-              adb logcat -d -v threadtime -t 1200 || true
-              exit 1
-            fi
-
-            echo "RYDEX PID: $PID"
-
-            TOP="$(adb shell dumpsys activity activities | tr -d '\r')"
-            echo "$TOP" | grep -q "com.rydex.app"
-
+            adb logcat -d -v threadtime -t 1200 | tail -n 500
+            test -n "$(adb shell pidof com.rydex.app | tr -d '\r')"
+            adb shell dumpsys activity activities | tr -d '\r' | grep -q "com.rydex.app"
             adb shell uiautomator dump /sdcard/window.xml >/dev/null
-            UI="$(adb shell cat /sdcard/window.xml | tr -d '\r')"
-            echo "$UI" | grep -q "RYDEX"
-
-            LOG="$(adb logcat -d -v threadtime -t 1200 | tr -d '\r')"
-            if echo "$LOG" | grep -q "FATAL EXCEPTION"; then
-              echo "$LOG"
-              exit 1
-            fi
+            adb shell cat /sdcard/window.xml | tr -d '\r' | grep -q "RYDEX"
+            adb logcat -d -v threadtime -t 1200 > /tmp/rydex.log
+            python3 -c 'import pathlib,sys; s=pathlib.Path("/tmp/rydex.log").read_text(errors="ignore"); sys.exit(1 if "FATAL EXCEPTION" in s or "AndroidRuntime" in s else 0)'
