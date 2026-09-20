@@ -110,12 +110,26 @@ jobs:
             adb shell am force-stop com.rydex.app
             adb logcat -c
 
+            echo "=== Launching RYDEX ==="
             adb shell am start -W -n com.rydex.app/.MainActivity
 
             sleep 5
 
             PID="$(adb shell pidof com.rydex.app | tr -d '\r')"
-            test -n "$PID"
+            if [ -z "$PID" ]; then
+              echo "RYDEX process is not running after launch."
+              echo "=== Activity state ==="
+              adb shell dumpsys activity activities | tail -n 160 || true
+              echo "=== Package state ==="
+              adb shell dumpsys package com.rydex.app | tail -n 160 || true
+              echo "=== Error logcat ==="
+              adb logcat -d -v threadtime "*:E" || true
+              echo "=== Full recent logcat ==="
+              adb logcat -d -v threadtime -t 1200 || true
+              exit 1
+            fi
+
+            echo "RYDEX PID: $PID"
 
             TOP="$(adb shell dumpsys activity activities | tr -d '\r')"
             echo "$TOP" | grep -q "com.rydex.app"
@@ -124,12 +138,8 @@ jobs:
             UI="$(adb shell cat /sdcard/window.xml | tr -d '\r')"
             echo "$UI" | grep -q "RYDEX"
 
-            LOG="$(adb logcat -d -t 1000 | tr -d '\r')"
+            LOG="$(adb logcat -d -v threadtime -t 1200 | tr -d '\r')"
             if echo "$LOG" | grep -q "FATAL EXCEPTION"; then
-              echo "$LOG"
-              exit 1
-            fi
-            if echo "$LOG" | grep -q "AndroidRuntime.*FATAL"; then
               echo "$LOG"
               exit 1
             fi
