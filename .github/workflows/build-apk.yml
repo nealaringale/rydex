@@ -103,28 +103,33 @@ jobs:
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none
           script: |
-            set -e
+            set -eu
+
             adb install -r app/build/outputs/apk/debug/app-debug.apk
             adb shell pm clear com.rydex.app >/dev/null 2>&1 || true
-            adb install -r app/build/outputs/apk/debug/app-debug.apk >/dev/null
             adb shell am force-stop com.rydex.app
-            adb shell am start -n com.rydex.app/.MainActivity
-            sleep 8
+            adb logcat -c
 
-            if ! adb shell pidof com.rydex.app | grep -q '[0-9]'; then
-              echo "RYDEX process is not running after launch."
-              adb logcat -d -t 500
+            adb shell am start -W -n com.rydex.app/.MainActivity
+
+            sleep 5
+
+            PID="$(adb shell pidof com.rydex.app | tr -d '\r')"
+            test -n "$PID"
+
+            TOP="$(adb shell dumpsys activity activities | tr -d '\r')"
+            echo "$TOP" | grep -q "com.rydex.app"
+
+            adb shell uiautomator dump /sdcard/window.xml >/dev/null
+            UI="$(adb shell cat /sdcard/window.xml | tr -d '\r')"
+            echo "$UI" | grep -q "RYDEX"
+
+            LOG="$(adb logcat -d -t 1000 | tr -d '\r')"
+            if echo "$LOG" | grep -q "FATAL EXCEPTION"; then
+              echo "$LOG"
               exit 1
             fi
-
-            adb shell uiautomator dump /sdcard/window.xml >/dev/null 2>&1 || true
-            adb shell cat /sdcard/window.xml | grep -q "RYDEX" || {
-              echo "RYDEX UI was not found in the activity window."
-              adb logcat -d -t 500
+            if echo "$LOG" | grep -q "AndroidRuntime.*FATAL"; then
+              echo "$LOG"
               exit 1
-            }
-
-            adb logcat -d -t 500 | grep -E "FATAL EXCEPTION|AndroidRuntime" && {
-              echo "Crash-related log entries detected."
-              exit 1
-            } || true
+            fi
