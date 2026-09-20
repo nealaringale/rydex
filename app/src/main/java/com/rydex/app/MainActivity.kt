@@ -6,7 +6,6 @@ import android.content.pm.PackageManager
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.enableEdgeToEdge
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -162,7 +161,6 @@ private fun rememberRydexWindowInfo(): RydexWindowInfo {
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
         setContent {
             RydexTheme {
                 RydexApp()
@@ -456,7 +454,7 @@ private fun HomeStatusPane(
                         tint = if (vm.hasLocationPermission) {
                             MaterialTheme.colorScheme.primary
                         } else {
-                            MaterialTheme.colorScheme.warning
+                            RydexColors.warning
                         },
                     )
                 }
@@ -532,7 +530,7 @@ private fun HomeStatusPane(
                 Icon(
                     Icons.Default.Info,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.info,
+                    tint = RydexColors.info,
                 )
                 Column {
                     Text("Tip", fontWeight = FontWeight.Bold)
@@ -676,7 +674,7 @@ private fun PreferenceOptions(
             title = "Fuel stop",
             description = "Add a refuelling stop based on your selected priority.",
             selected = vm.needsFuel,
-            tint = MaterialTheme.colorScheme.warning,
+            tint = RydexColors.warning,
             onChange = { vm.needsFuel = it },
         )
 
@@ -707,7 +705,7 @@ private fun PreferenceOptions(
             title = "Food stop",
             description = "Add a food stop close to your preferred time.",
             selected = vm.needsFood,
-            tint = MaterialTheme.colorScheme.success,
+            tint = RydexColors.success,
             onChange = { vm.needsFood = it },
         )
 
@@ -731,7 +729,7 @@ private fun PreferenceOptions(
             title = "Weather checkpoints",
             description = "Check conditions along the route and flag rain risk.",
             selected = vm.needsWeather,
-            tint = MaterialTheme.colorScheme.info,
+            tint = RydexColors.info,
             onChange = { vm.needsWeather = it },
         )
     }
@@ -826,19 +824,19 @@ private fun PreferenceSummary(
                 } else {
                     "Off"
                 },
-                tint = MaterialTheme.colorScheme.warning,
+                tint = RydexColors.warning,
             )
             SummaryLine(
                 icon = Icons.Default.Fastfood,
                 title = "Food",
                 value = if (vm.needsFood) vm.foodTime else "Off",
-                tint = MaterialTheme.colorScheme.success,
+                tint = RydexColors.success,
             )
             SummaryLine(
                 icon = Icons.Default.Cloud,
                 title = "Weather",
                 value = if (vm.needsWeather) "Every ~30 km" else "Off",
-                tint = MaterialTheme.colorScheme.info,
+                tint = RydexColors.info,
             )
 
             HorizontalDivider(
@@ -1258,9 +1256,9 @@ private fun SectionTitle(
 @Composable
 private fun StopCard(stop: Stop) {
     val tint = if (stop.type == "fuel") {
-        MaterialTheme.colorScheme.warning
+        RydexColors.warning
     } else {
-        MaterialTheme.colorScheme.success
+        RydexColors.success
     }
 
     RydexCard {
@@ -1328,7 +1326,7 @@ private fun StopCard(stop: Stop) {
                 ) {
                     Text(
                         "★",
-                        color = MaterialTheme.colorScheme.warning,
+                        color = RydexColors.warning,
                         fontWeight = FontWeight.Bold,
                     )
                     Text(
@@ -1349,7 +1347,7 @@ private fun WeatherCard(item: WeatherCheckpoint) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Surface(
-                color = MaterialTheme.colorScheme.info.copy(alpha = 0.12f),
+                color = RydexColors.info.copy(alpha = 0.12f),
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.size(44.dp),
             ) {
@@ -1357,7 +1355,7 @@ private fun WeatherCard(item: WeatherCheckpoint) {
                     Icon(
                         Icons.Default.Cloud,
                         contentDescription = "Weather",
-                        tint = MaterialTheme.colorScheme.info,
+                        tint = RydexColors.info,
                     )
                 }
             }
@@ -1391,7 +1389,7 @@ private fun WeatherCard(item: WeatherCheckpoint) {
                     Icon(
                         Icons.Default.WbSunny,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.info,
+                        tint = RydexColors.info,
                         modifier = Modifier.size(18.dp),
                     )
                     Text(
