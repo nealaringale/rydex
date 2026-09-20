@@ -25,7 +25,7 @@ class RydexRepository {
 
     fun backendUrl(): String = BuildConfig.BACKEND_URL
 
-    private fun String.ensureTrailingSlash() = if (endsWith('/')) this else "$"this/"
+    private fun String.ensureTrailingSlash() = if (endsWith('/')) this else "$this/"
 }
 
 object DemoPlanFactory {
@@ -53,6 +53,7 @@ object DemoPlanFactory {
                     ),
                 )
             }
+
             if (prefs.needsFood) {
                 add(
                     Stop(
@@ -118,6 +119,7 @@ private object PolylineEncoder {
             prevLat = lat
             prevLng = lng
         }
+
         return result.toString()
     }
 
@@ -129,6 +131,7 @@ private object PolylineEncoder {
             out.append(((0x20 or (value and 0x1f)) + 63).toChar())
             value = value shr 5
         }
+
         out.append((value + 63).toChar())
     }
 }
