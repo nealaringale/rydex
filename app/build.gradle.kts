@@ -1,7 +1,9 @@
 import java.util.Properties
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.kotlin.serialization)
 }
@@ -57,8 +59,14 @@ android {
         buildConfigField(
             "String",
             "BACKEND_URL",
-            "\"$backendUrl\"",
+            ""$backendUrl"",
         )
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget = JvmTarget.JVM_17
     }
 }
 
@@ -78,6 +86,6 @@ dependencies {
     implementation(libs.retrofit)
     implementation(libs.retrofit.json)
     implementation(libs.okhttp)
-    implementation(libs.kotlinx.serialization.json)
+    implementation(libs.kotlinx-serialization-json)
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
 }
