@@ -25,6 +25,9 @@ jobs:
         with:
           gradle-version: "9.3.1"
 
+      - name: Verify planner server JavaScript
+        run: node --check server/src/index.js
+
       - name: Prepare Android SDK
         shell: bash
         run: |
@@ -33,9 +36,6 @@ jobs:
           echo "ANDROID_HOME=$ANDROID_HOME"
           test -d "$ANDROID_HOME"
 
-          # GitHub's current Ubuntu 24.04 image already contains API 37,
-          # but the installed cmdline-tools can fail to resolve the new
-          # Major.Minor package metadata. Reuse the preinstalled platform.
           if [ -d "$ANDROID_HOME/platforms/android-37.0" ] && [ ! -e "$ANDROID_HOME/platforms/android-37" ]; then
             ln -s "$ANDROID_HOME/platforms/android-37.0" "$ANDROID_HOME/platforms/android-37"
           fi
