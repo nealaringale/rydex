@@ -32,6 +32,11 @@ android {
         versionCode = 1
         versionName = "0.1.0"
         manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
+        buildConfigField(
+            "String",
+            "MAPS_API_KEY",
+            "\"$mapsApiKey\"",
+        )
     }
 
     buildFeatures {
