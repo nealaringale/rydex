@@ -17,8 +17,8 @@ import java.time.format.DateTimeFormatter
 import kotlin.math.roundToInt
 
 class RydexViewModel(app: Application) : AndroidViewModel(app) {
-    private val repo = RydexRepository()
-    private val locationManager = RydexLocationManager(app)
+    private val repo by lazy { RydexRepository() }
+    private val locationManager by lazy { RydexLocationManager(app) }
     private var locationJob: Job? = null
 
     var destination by mutableStateOf("")
