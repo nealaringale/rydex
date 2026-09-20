@@ -86,6 +86,6 @@ dependencies {
     implementation(libs.retrofit)
     implementation(libs.retrofit.json)
     implementation(libs.okhttp)
-    implementation(libs.kotlinx-serialization-json)
+    implementation(libs.kotlinxSerializationJson)
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
 }
