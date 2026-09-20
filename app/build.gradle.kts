@@ -1,20 +1,23 @@
 import java.util.Properties
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.kotlin.serialization)
 }
 
 val localProperties = Properties().apply {
     val file = rootProject.file("local.properties")
-    if (file.exists()) file.inputStream().use(::load)
+    if (file.exists()) {
+        file.inputStream().use(::load)
+    }
 }
 
 val mapsApiKey = localProperties.getProperty("MAPS_API_KEY", "")
-val backendUrl = localProperties.getProperty("RYDEX_BACKEND_URL", "http://10.0.2.2:8787/")
+val backendUrl = localProperties.getProperty(
+    "RYDEX_BACKEND_URL",
+    "http://10.0.2.2:8787/",
+)
 
 android {
     namespace = "com.rydex.app"
@@ -51,13 +54,11 @@ android {
     }
 
     buildTypes.all {
-        buildConfigField("String", "BACKEND_URL", "\"$backendUrl\"")
-    }
-}
-
-kotlin {
-    compilerOptions {
-        jvmTarget = JvmTarget.JVM_17
+        buildConfigField(
+            "String",
+            "BACKEND_URL",
+            "\"$backendUrl\"",
+        )
     }
 }
 
