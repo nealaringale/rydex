@@ -29,8 +29,8 @@ android {
         applicationId = "com.rydex.app"
         minSdk = 26
         targetSdk = 37
-        versionCode = 4
-        versionName = "0.3.0"
+        versionCode = 5
+        versionName = "0.4.0"
         manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
         buildConfigField(
             "String",
