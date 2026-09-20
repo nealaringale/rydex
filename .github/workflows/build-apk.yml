@@ -25,19 +25,28 @@ jobs:
         with:
           gradle-version: "8.13"
 
-      - name: Configure Android SDK
+      - name: Verify Android SDK
         shell: bash
         run: |
           set -euxo pipefail
-          export ANDROID_SDK_ROOT="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
-          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> "$GITHUB_ENV"
-          yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager "platforms;android-36" "build-tools;36.0.0" "platform-tools"
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
+          test -d "$ANDROID_HOME"
+          if [ ! -d "$ANDROID_HOME/platforms/android-36" ]; then
+            SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+            if [ ! -x "$SDKMANAGER" ]; then
+              SDKMANAGER="$ANDROID_HOME/cmdline-tools/16.0/bin/sdkmanager"
+            fi
+            test -x "$SDKMANAGER"
+            yes | "$SDKMANAGER" --licenses >/dev/null || true
+            "$SDKMANAGER" "platforms;android-36" "build-tools;36.0.0" "platform-tools"
+          fi
+          test -d "$ANDROID_HOME/platforms/android-36"
 
       - name: Prepare demo local properties
         run: |
-          cat > local.properties <<'EOF'
-          sdk.dir=$ANDROID_SDK_ROOT
+          cat > local.properties <<EOF
+          sdk.dir=$ANDROID_HOME
           MAPS_API_KEY=
           RYDEX_BACKEND_URL=http://10.0.2.2:8787/
           EOF
