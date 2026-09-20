@@ -200,7 +200,6 @@ private fun RydexApp(vm: RydexViewModel = viewModel()) {
 private fun HomeScreen(vm: RydexViewModel, onPlan: () -> Unit) {
     val context = LocalContext.current
     val window = rememberRydexWindowInfo()
-    val lastCrash = remember { RydexCrashReporter.read(context) }
 
     val hasPermission = remember {
         ContextCompat.checkSelfPermission(
@@ -459,6 +458,8 @@ private fun HomeStatusPane(
     onRequestLocation: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current
+    val lastCrash = remember { RydexCrashReporter.read(context) }
     Column(
         modifier = modifier
             .verticalScroll(rememberScrollState()),
