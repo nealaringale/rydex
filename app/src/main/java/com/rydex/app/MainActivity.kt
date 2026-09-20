@@ -1,6 +1,8 @@
 package com.rydex.app
 
 import android.Manifest
+import android.content.ClipData
+import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.widget.Toast
@@ -198,6 +200,7 @@ private fun RydexApp(vm: RydexViewModel = viewModel()) {
 private fun HomeScreen(vm: RydexViewModel, onPlan: () -> Unit) {
     val context = LocalContext.current
     val window = rememberRydexWindowInfo()
+    val lastCrash = remember { RydexCrashReporter.read(context) }
 
     val hasPermission = remember {
         ContextCompat.checkSelfPermission(
@@ -589,6 +592,48 @@ private fun HomeStatusPane(
                 }
             }
         }
+        lastCrash?.let { report ->
+            RydexCard(
+                modifier = Modifier.fillMaxWidth(),
+                tone = CardTone.High,
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Eyebrow("DIAGNOSTICS", color = RydexColors.error)
+                    Text(
+                        "A previous RYDEX session crashed",
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text(
+                        report.lineSequence().take(7).joinToString("\n"),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 7,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        TextButton(
+                            onClick = {
+                                val clipboard =
+                                    context.getSystemService(Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
+                                clipboard?.setPrimaryClip(
+                                    ClipData.newPlainText("RYDEX crash report", report),
+                                )
+                            },
+                        ) {
+                            Text("Copy report")
+                        }
+                        TextButton(
+                            onClick = {
+                                RydexCrashReporter.clear(context)
+                            },
+                        ) {
+                            Text("Dismiss")
+                        }
+                    }
+                }
+            }
+        }
+
     }
 }
 
