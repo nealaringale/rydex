@@ -798,8 +798,6 @@ function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
 
-app.listen(PORT, () => {
-  console.log(
-    `RYDEX planner server listening on http://localhost:${PORT}`,
-  );
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`RYDEX planner server listening on port ${PORT}`);
 });
