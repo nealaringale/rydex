@@ -1182,8 +1182,6 @@ private fun RideStat(
 }
 
 @Composable
-@Composable
-@Composable
 private fun TripMapPreview(
     plan: TripPlan?,
     modifier: Modifier,
