@@ -1183,6 +1183,7 @@ private fun RideStat(
 
 @Composable
 @Composable
+@Composable
 private fun TripMapPreview(
     plan: TripPlan?,
     modifier: Modifier,
@@ -1190,7 +1191,9 @@ private fun TripMapPreview(
     val context = LocalContext.current
     val route = remember(plan?.encodedPolyline) {
         runCatching {
-            plan?.encodedPolyline?.takeIf { it.isNotBlank() }?.let(PolylineDecoder::decode)
+            plan?.encodedPolyline
+                ?.takeIf { it.isNotBlank() }
+                ?.let(PolylineDecoder::decode)
                 .orEmpty()
         }.getOrElse { emptyList() }
     }
@@ -1283,30 +1286,32 @@ private fun TripMapPreview(
                     Icon(
                         Icons.Default.Map,
                         contentDescription = null,
-                        tint = if (isMapsConfigured()) {
-                            RydexColors.info
-                        } else {
+                        tint = if (!isMapsConfigured()) {
                             RydexColors.warning
+                        } else {
+                            RydexColors.info
                         },
                     )
                     Text(
                         when {
+                            route.isEmpty() -> "Route preview unavailable"
                             !isMapsConfigured() -> "Google Maps setup required"
                             !isGooglePlayServicesAvailable(context) ->
                                 "Google Play services required"
-                            route.isEmpty() -> "Route preview unavailable"
-                            else -> "Map preview unavailable"
+                            else -> "Map unavailable"
                         },
                         fontWeight = FontWeight.Bold,
                     )
                     Text(
                         when {
+                            route.isEmpty() ->
+                                "RYDEX does not have a valid route to preview yet."
                             !isMapsConfigured() ->
-                                "This build has no valid Maps API key."
+                                "This APK has no valid Google Maps Android key."
                             !isGooglePlayServicesAvailable(context) ->
                                 "Google Play services are unavailable on this device."
                             else ->
-                                "RYDEX can still show the trip details without the map."
+                                "Trip details remain available without the map."
                         },
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodySmall,
@@ -1585,6 +1590,9 @@ private fun RideScreen(
             val context = LocalContext.current
 
         if (canRenderGoogleMap(context)) {
+            val context = LocalContext.current
+
+        if (canRenderGoogleMap(context)) {
             GoogleMap(
                 modifier = Modifier.fillMaxSize(),
                 cameraPositionState = cameraPositionState,
@@ -1654,11 +1662,11 @@ private fun RideScreen(
                     Text(
                         when {
                             !isMapsConfigured() ->
-                                "Add a valid Android-restricted Maps API key to this build."
+                                "This APK was built without a valid Maps API key."
                             !isGooglePlayServicesAvailable(context) ->
                                 "Google Play services are unavailable on this device."
                             else ->
-                                "RYDEX navigation can continue without rendering Google Maps."
+                                "Navigation details remain visible without the map."
                         },
                         color = Color(0xFFB9C3CB),
                         style = MaterialTheme.typography.bodySmall,
