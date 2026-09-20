@@ -27,6 +27,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
@@ -97,6 +99,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.compose.ComposeMapColorScheme
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.MapUiSettings
@@ -425,7 +428,8 @@ private fun HomeStatusPane(
     modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier = modifier,
+        modifier = modifier
+            .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         RydexCard(
@@ -447,7 +451,7 @@ private fun HomeStatusPane(
                         )
                     }
                     StatusPill(
-                        text = "GPS",
+                        text = if (vm.hasLocationPermission) "GPS ready" else "GPS off",
                         icon = Icons.Default.GpsFixed,
                         tint = if (vm.hasLocationPermission) {
                             MaterialTheme.colorScheme.primary
@@ -1123,6 +1127,8 @@ private fun TripMapPreview(
             GoogleMap(
                 modifier = Modifier.fillMaxSize(),
                 cameraPositionState = cameraPositionState,
+                contentDescription = "Trip route map",
+                mapColorScheme = ComposeMapColorScheme.FOLLOW_SYSTEM,
                 properties = MapProperties(),
                 uiSettings = MapUiSettings(
                     zoomControlsEnabled = false,
@@ -1451,6 +1457,8 @@ private fun RideScreen(
         GoogleMap(
             modifier = Modifier.fillMaxSize(),
             cameraPositionState = cameraPositionState,
+            contentDescription = "RYDEX live navigation map",
+            mapColorScheme = ComposeMapColorScheme.DARK,
             properties = MapProperties(
                 isMyLocationEnabled = vm.hasLocationPermission,
             ),
@@ -1545,7 +1553,8 @@ private fun RideTopOverlay(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(14.dp),
+            .statusBarsPadding()
+            .padding(horizontal = 14.dp, vertical = 10.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         RideTopPill(
@@ -1604,6 +1613,7 @@ private fun RideBottomPanel(
     Surface(
         modifier = modifier
             .fillMaxWidth()
+            .navigationBarsPadding()
             .padding(12.dp),
         color = Color(0xF20D1318),
         shape = RoundedCornerShape(22.dp),
