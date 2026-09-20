@@ -56,18 +56,24 @@ class RydexLocationManager(context: Context) {
             }
         }
 
-        val task = client.requestLocationUpdates(
-            request,
-            callback,
-            Looper.getMainLooper(),
-        )
+        try {
+            val task = client.requestLocationUpdates(
+                request,
+                callback,
+                Looper.getMainLooper(),
+            )
 
-        task.addOnFailureListener { throwable ->
-            close(throwable)
-        }
+            task.addOnFailureListener { throwable ->
+                close(throwable)
+            }
 
-        awaitClose {
-            client.removeLocationUpdates(callback)
+            awaitClose {
+                client.removeLocationUpdates(callback)
+            }
+        } catch (security: SecurityException) {
+            close(security)
+        } catch (failure: RuntimeException) {
+            close(failure)
         }
     }.distinctUntilChanged { a, b ->
         a.latitude == b.latitude &&
