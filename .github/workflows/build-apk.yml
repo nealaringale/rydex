@@ -25,32 +25,27 @@ jobs:
         with:
           gradle-version: "9.3.1"
 
-      - name: Configure Android SDK
+      - name: Prepare Android SDK
         shell: bash
         run: |
           set -euxo pipefail
 
-          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
-          if [ ! -x "$SDKMANAGER" ]; then
-            SDKMANAGER="$ANDROID_HOME/cmdline-tools/16.0/bin/sdkmanager"
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          test -d "$ANDROID_HOME"
+
+          # GitHub's current Ubuntu 24.04 image already contains API 37,
+          # but the installed cmdline-tools can fail to resolve the new
+          # Major.Minor package metadata. Reuse the preinstalled platform.
+          if [ -d "$ANDROID_HOME/platforms/android-37.0" ] && [ ! -e "$ANDROID_HOME/platforms/android-37" ]; then
+            ln -s "$ANDROID_HOME/platforms/android-37.0" "$ANDROID_HOME/platforms/android-37"
           fi
 
-          test -x "$SDKMANAGER"
-          yes | "$SDKMANAGER" --licenses >/dev/null || true
-
-          if [ ! -d "$ANDROID_HOME/platforms/android-37" ]; then
-            "$SDKMANAGER" "platforms;android-37"
-          fi
+          test -f "$ANDROID_HOME/platforms/android-37/android.jar"
 
           if [ ! -d "$ANDROID_HOME/build-tools/36.0.0" ]; then
-            "$SDKMANAGER" "build-tools;36.0.0"
+            echo "Required Android build-tools 36.0.0 are missing from the runner."
+            exit 1
           fi
-
-          if [ ! -d "$ANDROID_HOME/platform-tools" ]; then
-            "$SDKMANAGER" "platform-tools"
-          fi
-
-          test -d "$ANDROID_HOME/platforms/android-37"
 
       - name: Prepare demo local properties
         run: |
